@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recipe Preparation Agent — Chef Aanya</title>
+
+  <!-- Bootstrap 5.3 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+        crossorigin="anonymous" />
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        rel="stylesheet" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap"
+        rel="stylesheet" />
+
+  <style>
+    /* ── CSS Custom Properties ──────────────────────────────────────── */
+    :root {
+      --bg:           #f8f5f0;
+      --surface:      #ffffff;
+      --surface2:     #f1ede6;
+      --border:       #e2dbd0;
+      --text:         #1c1917;
+      --text-muted:   #78716c;
+      --accent:       #c2410c;       /* warm orange-red — food brand feel */
+      --accent2:      #16a34a;       /* green for "matched" */
+      --accent3:      #d97706;       /* amber for "missing" */
+      --chat-user:    #fff7ed;
+      --chat-agent:   #f0fdf4;
+      --shadow:       0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.06);
+      --radius:       14px;
+      --transition:   .22s ease;
+      --header-h:     64px;
+    }
+    [data-theme="dark"] {
+      --bg:           #161412;
+      --surface:      #1e1c1a;
+      --surface2:     #2a2724;
+      --border:       #3a3530;
+      --text:         #f5f0ea;
+      --text-muted:   #a8a29e;
+      --chat-user:    #2a1f1a;
+      --chat-agent:   #162113;
+      --shadow:       0 1px 3px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+    }
+
+    /* ── Base ───────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background var(--transition), color var(--transition);
+      overflow-x: hidden;
+    }
+    a { color: var(--accent); text-decoration: none; }
+
+    /* ── Header ─────────────────────────────────────────────────────── */
+    .app-header {
+      position: sticky; top: 0; z-index: 1000;
+      height: var(--header-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.25rem;
+      backdrop-filter: blur(8px);
+      transition: background var(--transition);
+    }
+    .brand {
+      display: flex; align-items: center; gap: .55rem;
+      font-family: 'Playfair Display', serif;
+      font-size: 1.25rem; font-weight: 700;
+      color: var(--accent);
+    }
+    .brand-icon { font-size: 1.6rem; }
+    .header-actions { display: flex; align-items: center; gap: .5rem; }
+
+    /* ── Dark-mode toggle ───────────────────────────────────────────── */
+    .theme-toggle {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; padding: .3rem .75rem;
+      cursor: pointer; font-size: .8rem; color: var(--text-muted);
+      display: flex; align-items: center; gap: .4rem;
+      transition: background var(--transition);
+    }
+    .theme-toggle:hover { background: var(--border); }
+
+    /* ── Navigation tabs ────────────────────────────────────────────── */
+    .nav-tabs-custom {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 1.25rem;
+      display: flex; gap: 0; overflow-x: auto;
+    }
+    .nav-tab {
+      padding: .75rem 1.1rem;
+      font-size: .85rem; font-weight: 500;
+      color: var(--text-muted);
+      border-bottom: 2.5px solid transparent;
+      cursor: pointer; white-space: nowrap;
+      transition: color .15s, border-color .15s;
+      display: flex; align-items: center; gap: .4rem;
+      user-select: none;
+    }
+    .nav-tab:hover  { color: var(--accent); }
+    .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* ── Layout ─────────────────────────────────────────────────────── */
+    .app-body {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      grid-template-rows: 1fr;
+      height: calc(100vh - var(--header-h) - 42px); /* 42px = tab bar */
+      overflow: hidden;
+    }
+    @media (max-width: 900px) {
+      .app-body { grid-template-columns: 1fr; }
+      .sidebar  { display: none !important; }
+      .sidebar.mobile-open { display: flex !important; }
+    }
+
+    /* ── Sidebar ────────────────────────────────────────────────────── */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      transition: background var(--transition);
+    }
+    .panel-header {
+      padding: 1rem 1.1rem .75rem;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600; font-size: .9rem;
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .panel-body { flex: 1; overflow-y: auto; padding: 1rem; }
+
+    /* ── Card ───────────────────────────────────────────────────────── */
+    .card-custom {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      transition: background var(--transition), box-shadow .2s;
+    }
+    .card-custom:hover { box-shadow: 0 4px 20px rgba(0,0,0,.12); }
+
+    /* ── Ingredient tags ────────────────────────────────────────────── */
+    .tag {
+      display: inline-flex; align-items: center; gap: .3rem;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 20px; padding: .2rem .7rem;
+      font-size: .78rem; color: var(--text);
+      transition: background .15s;
+      animation: tagIn .2s ease;
+    }
+    .tag .remove-tag {
+      cursor: pointer; color: var(--text-muted);
+      line-height: 1; font-size: .9rem;
+      transition: color .15s;
+    }
+    .tag .remove-tag:hover { color: var(--accent); }
+    @keyframes tagIn {
+      from { opacity: 0; transform: scale(.7); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    /* ── Dietary filter pills ───────────────────────────────────────── */
+    .filter-pill {
+      padding: .35rem .9rem; border-radius: 20px; font-size: .8rem;
+      font-weight: 500; border: 1.5px solid var(--border);
+      background: var(--surface2); color: var(--text-muted);
+      cursor: pointer; transition: all .15s;
+      user-select: none;
+    }
+    .filter-pill.active {
+      background: var(--accent); border-color: var(--accent);
+      color: #fff; box-shadow: 0 2px 8px rgba(194,65,12,.3);
+    }
+    .filter-pill:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Recipe cards ───────────────────────────────────────────────── */
+    .recipe-card {
+      border-radius: var(--radius); overflow: hidden;
+      background: var(--surface); border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      transition: transform .2s, box-shadow .2s;
+      cursor: pointer; animation: slideUp .3s ease;
+    }
+    .recipe-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.14); }
+    .recipe-card-header {
+      padding: .85rem 1rem .6rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .recipe-card-body { padding: .75rem 1rem; }
+    .recipe-name { font-weight: 700; font-size: .95rem; line-height: 1.3; }
+    .recipe-meta { font-size: .75rem; color: var(--text-muted); display: flex; gap: .75rem; flex-wrap: wrap; margin-top: .3rem; }
+    .meta-badge {
+      display: inline-flex; align-items: center; gap: .25rem;
+      background: var(--surface2); border-radius: 10px;
+      padding: .15rem .5rem; font-size: .72rem;
+    }
+    .match-bar-wrap { margin-top: .6rem; }
+    .match-label { font-size: .73rem; color: var(--text-muted); display: flex; justify-content: space-between; margin-bottom: .25rem; }
+    .match-bar {
+      height: 5px; border-radius: 3px; background: var(--border);
+      overflow: hidden;
+    }
+    .match-fill {
+      height: 100%; border-radius: 3px;
+      background: linear-gradient(90deg, var(--accent2), #86efac);
+      transition: width .5s ease;
+    }
+    .ingredient-list { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .5rem; }
+    .ing-have { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; border-radius: 10px; padding: .1rem .5rem; font-size: .72rem; }
+    .ing-missing { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 10px; padding: .1rem .5rem; font-size: .72rem; }
+    [data-theme="dark"] .ing-have    { background: #14532d; color: #86efac; border-color: #166534; }
+    [data-theme="dark"] .ing-missing { background: #451a03; color: #fbbf24; border-color: #78350f; }
+    .waste-badge {
+      display: inline-flex; align-items: center; gap: .25rem;
+      font-size: .72rem; font-weight: 600;
+      padding: .15rem .55rem; border-radius: 10px;
+    }
+    .waste-high    { background: #dcfce7; color: #15803d; }
+    .waste-medium  { background: #fef9c3; color: #854d0e; }
+    .waste-low     { background: #fee2e2; color: #991b1b; }
+    [data-theme="dark"] .waste-high   { background: #14532d; color: #86efac; }
+    [data-theme="dark"] .waste-medium { background: #422006; color: #fbbf24; }
+    [data-theme="dark"] .waste-low    { background: #450a0a; color: #fca5a5; }
+
+    /* ── Chat UI ────────────────────────────────────────────────────── */
+    .chat-area {
+      display: flex; flex-direction: column;
+      overflow: hidden; background: var(--bg);
+      transition: background var(--transition);
+    }
+    .chat-messages {
+      flex: 1; overflow-y: auto; padding: 1.25rem 1rem;
+      display: flex; flex-direction: column; gap: .75rem;
+    }
+    .bubble-row { display: flex; align-items: flex-end; gap: .6rem; }
+    .bubble-row.user-row { flex-direction: row-reverse; }
+    .avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .avatar-agent { background: var(--accent); color: #fff; }
+    .avatar-user  { background: var(--accent2); color: #fff; }
+    .bubble {
+      max-width: 72%; padding: .65rem .9rem;
+      border-radius: 18px; font-size: .875rem; line-height: 1.6;
+      animation: bubbleIn .25s ease; position: relative;
+      word-break: break-word;
+    }
+    .bubble-agent {
+      background: var(--chat-agent); border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+      color: var(--text);
+    }
+    .bubble-user {
+      background: var(--accent); color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .bubble-time { font-size: .65rem; opacity: .6; margin-top: .3rem; text-align: right; }
+    @keyframes bubbleIn {
+      from { opacity: 0; transform: translateY(10px) scale(.96); }
+      to   { opacity: 1; transform: translateY(0)  scale(1); }
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Typing indicator ───────────────────────────────────────────── */
+    .typing-indicator { display: flex; gap: 4px; align-items: center; padding: .5rem .7rem; }
+    .typing-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--text-muted); animation: typingBounce 1.2s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: .2s; }
+    .typing-dot:nth-child(3) { animation-delay: .4s; }
+    @keyframes typingBounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: .5; }
+      30%           { transform: translateY(-6px); opacity: 1; }
+    }
+
+    /* ── Chat input bar ─────────────────────────────────────────────── */
+    .chat-input-area {
+      padding: .85rem 1rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      display: flex; gap: .6rem; align-items: flex-end;
+      transition: background var(--transition);
+    }
+    .chat-textarea {
+      flex: 1; resize: none; min-height: 40px; max-height: 130px;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 20px; padding: .5rem 1rem;
+      font-size: .875rem; font-family: inherit;
+      outline: none; transition: border-color .15s, background .15s;
+      overflow-y: auto; line-height: 1.5;
+    }
+    .chat-textarea:focus { border-color: var(--accent); background: var(--surface); }
+    .chat-textarea::placeholder { color: var(--text-muted); }
+    .send-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0; transition: transform .15s, background .15s;
+      font-size: 1rem;
+    }
+    .send-btn:hover:not(:disabled) { background: #9a3412; transform: scale(1.08); }
+    .send-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    /* ── Welcome screen ─────────────────────────────────────────────── */
+    .welcome-screen {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; gap: 1rem; padding: 2rem;
+      animation: fadeIn .4s ease;
+    }
+    .welcome-icon { font-size: 4rem; animation: iconFloat 3s ease-in-out infinite; }
+    .welcome-title { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 700; }
+    .welcome-sub { color: var(--text-muted); font-size: .9rem; max-width: 340px; }
+    .quick-prompt-grid { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; margin-top: .5rem; }
+    .quick-prompt {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: .4rem .9rem; font-size: .8rem;
+      cursor: pointer; transition: background .15s, border-color .15s;
+    }
+    .quick-prompt:hover { border-color: var(--accent); color: var(--accent); }
+    @keyframes fadeIn  { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes iconFloat {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-8px); }
+    }
+
+    /* ── Substitution / Dietary view ────────────────────────────────── */
+    .restriction-card {
+      border-radius: var(--radius); padding: .9rem 1rem;
+      background: var(--surface); border: 1px solid var(--border);
+      margin-bottom: .6rem; cursor: pointer;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .restriction-card.active {
+      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(194,65,12,.12);
+    }
+    .restriction-title { font-weight: 600; font-size: .9rem; display: flex; align-items: center; gap: .5rem; }
+    .restriction-sub   { font-size: .78rem; color: var(--text-muted); margin-top: .2rem; }
+
+    /* ── Scrollbar ──────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── Utility ────────────────────────────────────────────────────── */
+    .section-label { font-size: .7rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); margin-bottom: .5rem; }
+    .empty-state { text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: .85rem; }
+    .empty-state i { font-size: 2rem; display: block; margin-bottom: .5rem; opacity: .4; }
+    .badge-cuisine { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: .1rem .5rem; font-size: .7rem; }
+    .markdown-body strong { font-weight: 700; }
+    .markdown-body em     { font-style: italic; }
+    .markdown-body ul, .markdown-body ol { padding-left: 1.4rem; margin: .3rem 0; }
+    .markdown-body li  { margin-bottom: .2rem; }
+    .markdown-body p   { margin-bottom: .4rem; }
+
+    /* ── Status dot ─────────────────────────────────────────────────── */
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #22c55e; box-shadow: 0 0 0 2px rgba(34,197,94,.25);
+      animation: pulse 2s infinite;
+    }
+    .status-dot.offline { background: #ef4444; box-shadow: 0 0 0 2px rgba(239,68,68,.25); }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 2px rgba(34,197,94,.25); }
+      50%       { box-shadow: 0 0 0 5px rgba(34,197,94,.05); }
+    }
+
+    /* ── Mobile toolbar ─────────────────────────────────────────────── */
+    .mobile-bar {
+      display: none; position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--surface); border-top: 1px solid var(--border);
+      z-index: 999; padding: .4rem;
+    }
+    @media (max-width: 900px) {
+      .mobile-bar { display: flex; }
+      .app-body   { height: calc(100vh - var(--header-h) - 42px - 56px); }
+    }
+    .mobile-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      gap: 2px; font-size: .65rem; color: var(--text-muted);
+      cursor: pointer; padding: .3rem; border-radius: 8px;
+      transition: background .15s, color .15s;
+    }
+    .mobile-btn i { font-size: 1.2rem; }
+    .mobile-btn.active { color: var(--accent); background: var(--surface2); }
+
+    /* ── Ingredient input ───────────────────────────────────────────── */
+    .ing-input-row { display: flex; gap: .4rem; }
+    .ing-input {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 10px; padding: .45rem .8rem;
+      font-size: .85rem; outline: none; font-family: inherit;
+      transition: border-color .15s;
+    }
+    .ing-input:focus { border-color: var(--accent); }
+    .ing-add-btn {
+      background: var(--accent); color: #fff; border: none;
+      border-radius: 10px; padding: .45rem .9rem;
+      font-size: .85rem; cursor: pointer; font-weight: 500;
+      transition: background .15s;
+    }
+    .ing-add-btn:hover { background: #9a3412; }
+
+    /* ── Tab panels ─────────────────────────────────────────────────── */
+    .tab-panel { display: none; flex: 1; overflow: hidden; }
+    .tab-panel.active { display: flex; flex-direction: column; }
+
+    /* ── Toasts ─────────────────────────────────────────────────────── */
+    .toast-container-custom {
+      position: fixed; bottom: 80px; right: 1rem; z-index: 9999;
+      display: flex; flex-direction: column; gap: .4rem;
+    }
+    .toast-msg {
+      background: var(--text); color: var(--bg);
+      border-radius: 10px; padding: .55rem 1rem; font-size: .82rem;
+      box-shadow: var(--shadow); animation: toastIn .25s ease;
+      max-width: 280px;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     APP HEADER
+═══════════════════════════════════════════════════════════════════════ -->
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-icon">🍳</span>
+    Chef Aanya
+  </div>
+  <div class="header-actions">
+    <div style="display:flex;align-items:center;gap:.4rem;font-size:.78rem;color:var(--text-muted)">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusLabel">Ready</span>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+      <i class="bi bi-moon-stars-fill" id="themeIcon"></i>
+      <span id="themeLabel">Dark</span>
+    </button>
+  </div>
+</header>
+
+<!-- ── Navigation Tabs ────────────────────────────────────────────────── -->
+<nav class="nav-tabs-custom" id="mainTabs">
+  <div class="nav-tab active" data-tab="chat" onclick="switchTab('chat', this)">
+    <i class="bi bi-chat-dots-fill"></i> Chat
+  </div>
+  <div class="nav-tab" data-tab="pantry" onclick="switchTab('pantry', this)">
+    <i class="bi bi-basket3-fill"></i> Pantry
+  </div>
+  <div class="nav-tab" data-tab="recipes" onclick="switchTab('recipes', this)">
+    <i class="bi bi-journal-bookmark-fill"></i> Recipes
+  </div>
+  <div class="nav-tab" data-tab="dietary" onclick="switchTab('dietary', this)">
+    <i class="bi bi-heart-fill"></i> Dietary
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     APP BODY
+═══════════════════════════════════════════════════════════════════════ -->
+<div class="app-body">
+
+  <!-- ── Left Sidebar ─────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <!-- Pantry section in sidebar -->
+    <div class="panel-header">
+      <i class="bi bi-basket3-fill" style="color:var(--accent)"></i> My Pantry
+      <span class="ms-auto badge bg-secondary" id="sidePantryCount">0</span>
+    </div>
+    <div class="panel-body" id="sidePantryArea">
+      <div class="section-label">Add Ingredients</div>
+      <div class="ing-input-row mb-3">
+        <input type="text" class="ing-input" id="sideIngInput" placeholder="e.g. spinach, garlic…"
+               onkeydown="if(event.key==='Enter') addIngredientSide()" />
+        <button class="ing-add-btn" onclick="addIngredientSide()">Add</button>
+      </div>
+      <div id="sideIngTags" class="d-flex flex-wrap gap-1 mb-3"></div>
+
+      <div class="section-label">Quick Starters</div>
+      <div class="d-flex flex-wrap gap-1 mb-3" id="quickIngredients">
+        <!-- populated by JS -->
+      </div>
+
+      <hr style="border-color:var(--border);margin:.6rem 0"/>
+
+      <div class="section-label">Active Filters</div>
+      <div id="sideActiveFilters" class="d-flex flex-wrap gap-1 mb-3">
+        <span class="empty-state" style="padding:.3rem 0;font-size:.78rem;text-align:left">
+          No filters set
+        </span>
+      </div>
+
+      <button class="btn btn-sm w-100 mt-2" style="background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;font-size:.8rem" onclick="clearSession()">
+        <i class="bi bi-arrow-counterclockwise"></i> Clear Conversation
+      </button>
+    </div>
+  </aside>
+
+  <!-- ── Main Content Area ─────────────────────────────────────────────── -->
+  <main style="display:flex;flex-direction:column;overflow:hidden;">
+
+    <!-- ████ TAB: CHAT ███████████████████████████████████████████████████ -->
+    <div class="tab-panel active" id="tab-chat">
+      <div class="chat-area" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+
+        <!-- Welcome screen (shown when no messages) -->
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-icon">👩‍🍳</div>
+          <div class="welcome-title">Hi! I'm Chef Aanya</div>
+          <p class="welcome-sub">
+            Tell me what ingredients you have and I'll suggest the best recipes to
+            minimise food waste and maximise flavour.
+          </p>
+          <div class="quick-prompt-grid">
+            <div class="quick-prompt" onclick="sendQuickPrompt('What can I cook with onion, tomato and lentils?')">🍲 Lentil ideas</div>
+            <div class="quick-prompt" onclick="sendQuickPrompt('Suggest a quick 20-minute dinner with leftover rice')">🍚 Leftover rice</div>
+            <div class="quick-prompt" onclick="sendQuickPrompt('Give me a vegan recipe with chickpeas')">🌱 Vegan chickpeas</div>
+            <div class="quick-prompt" onclick="sendQuickPrompt('What can I make with overripe bananas?')">🍌 Overripe bananas</div>
+            <div class="quick-prompt" onclick="sendQuickPrompt('I have stale bread — any ideas?')">🍞 Stale bread</div>
+          </div>
+        </div>
+
+        <!-- Chat messages -->
+        <div class="chat-messages" id="chatMessages" style="display:none"></div>
+
+        <!-- Input bar -->
+        <div class="chat-input-area">
+          <textarea class="chat-textarea" id="chatInput" rows="1"
+            placeholder="Ask Chef Aanya anything…"
+            onkeydown="handleChatKey(event)"
+            oninput="autoResize(this)"></textarea>
+          <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+            <i class="bi bi-send-fill"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ████ TAB: PANTRY ██████████████████████████████████████████████████ -->
+    <div class="tab-panel" id="tab-pantry">
+      <div style="flex:1;overflow-y:auto;padding:1.25rem 1.25rem 2rem">
+
+        <h5 style="font-family:'Playfair Display',serif;font-weight:700;margin-bottom:.25rem">
+          🛒 Ingredient Inventory
+        </h5>
+        <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:1.25rem">
+          Build your pantry. The agent uses this list to find matching recipes.
+        </p>
+
+        <div class="card-custom p-3 mb-3">
+          <div class="section-label">Add Ingredients</div>
+          <div class="ing-input-row">
+            <input type="text" class="ing-input" id="mainIngInput"
+                   placeholder="Type an ingredient and press Enter or Add…"
+                   onkeydown="if(event.key==='Enter') addIngredientMain()" />
+            <button class="ing-add-btn" onclick="addIngredientMain()">
+              <i class="bi bi-plus-lg"></i> Add
+            </button>
+          </div>
+        </div>
+
+        <div class="card-custom p-3 mb-3">
+          <div class="section-label">Quick-Add Popular Ingredients</div>
+          <div class="d-flex flex-wrap gap-1" id="mainQuickIngredients"></div>
+        </div>
+
+        <div class="card-custom p-3">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="section-label mb-0">Your Pantry (<span id="mainPantryCount">0</span> items)</div>
+            <button style="background:none;border:none;font-size:.75rem;color:var(--text-muted);cursor:pointer"
+                    onclick="clearAllIngredients()">
+              <i class="bi bi-trash3"></i> Clear all
+            </button>
+          </div>
+          <div id="mainIngTags" class="d-flex flex-wrap gap-1">
+            <div class="empty-state"><i class="bi bi-basket3"></i>Your pantry is empty</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ████ TAB: RECIPES ████████████████████████████████████████████████ -->
+    <div class="tab-panel" id="tab-recipes">
+      <div style="flex:1;overflow-y:auto;padding:1.25rem 1.25rem 2rem">
+
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <h5 style="font-family:'Playfair Display',serif;font-weight:700;margin-bottom:.15rem">
+              🍽️ Recipe Recommendations
+            </h5>
+            <p style="font-size:.82rem;color:var(--text-muted);margin:0">
+              Ranked by ingredient match · Top <span id="recipeTopK">5</span> results
+            </p>
+          </div>
+          <button class="ing-add-btn" onclick="refreshRecipes()" style="font-size:.8rem;padding:.4rem .8rem">
+            <i class="bi bi-arrow-clockwise"></i> Refresh
+          </button>
+        </div>
+
+        <div id="recipeGrid" class="row g-3">
+          <div class="col-12">
+            <div class="empty-state">
+              <i class="bi bi-journal-bookmark"></i>
+              Add ingredients to your pantry to see recipe recommendations.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ████ TAB: DIETARY ████████████████████████████████████████████████ -->
+    <div class="tab-panel" id="tab-dietary">
+      <div style="flex:1;overflow-y:auto;padding:1.25rem 1.25rem 2rem">
+
+        <h5 style="font-family:'Playfair Display',serif;font-weight:700;margin-bottom:.25rem">
+          ❤️ Dietary & Substitution Planner
+        </h5>
+        <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:1.25rem">
+          Toggle your restrictions. Chef Aanya will filter recipes and automatically suggest
+          ingredient substitutions to match your needs.
+        </p>
+
+        <div class="section-label">Dietary Restrictions</div>
+        <div class="row g-2 mb-4" id="dietaryCards">
+          <!-- populated by JS -->
+        </div>
+
+        <div class="section-label">Allergy Alerts</div>
+        <div class="row g-2 mb-4" id="allergyCards">
+          <!-- populated by JS -->
+        </div>
+
+        <div class="section-label">Ask for a Substitution</div>
+        <div class="card-custom p-3">
+          <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:.75rem">
+            Tell Chef Aanya which ingredient you want to replace and she'll suggest the best swap.
+          </p>
+          <div class="ing-input-row">
+            <input type="text" class="ing-input" id="subInput"
+                   placeholder="e.g. Replace paneer with tofu for vegan…"
+                   onkeydown="if(event.key==='Enter') askSubstitution()" />
+            <button class="ing-add-btn" onclick="askSubstitution()">
+              <i class="bi bi-arrow-left-right"></i> Ask
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div><!-- /.app-body -->
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-bar">
+  <div class="mobile-btn active" data-mob="chat"   onclick="switchMob('chat', this)">
+    <i class="bi bi-chat-dots-fill"></i> Chat
+  </div>
+  <div class="mobile-btn" data-mob="pantry" onclick="switchMob('pantry', this)">
+    <i class="bi bi-basket3-fill"></i> Pantry
+  </div>
+  <div class="mobile-btn" data-mob="recipes" onclick="switchMob('recipes', this)">
+    <i class="bi bi-journal-bookmark-fill"></i> Recipes
+  </div>
+  <div class="mobile-btn" data-mob="dietary" onclick="switchMob('dietary', this)">
+    <i class="bi bi-heart-fill"></i> Dietary
+  </div>
+</nav>
+
+<!-- Toast container -->
+<div class="toast-container-custom" id="toastContainer"></div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+  integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmBXB1vkb8KhmE6yyNf/1L4gI65"
+  crossorigin="anonymous"></script>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════════════════ */
+const STATE = {
+  ingredients: [],
+  filters: [],
+  messages: [],   // { role, content, time }
+};
+
+const QUICK_INGREDIENTS = [
+  "onion","tomato","garlic","ginger","potato","eggs","rice","lentils",
+  "spinach","chicken","paneer","chickpeas","cumin seeds","turmeric",
+  "coriander","garam masala","yogurt","milk","butter","oil",
+];
+
+const DIETARY_OPTIONS = [
+  { id:"vegetarian",  label:"Vegetarian", icon:"🥦",
+    desc:"Excludes meat, poultry, and seafood." },
+  { id:"vegan",       label:"Vegan",      icon:"🌱",
+    desc:"Excludes all animal products including dairy and honey." },
+  { id:"gluten-free", label:"Gluten-Free",icon:"🌾",
+    desc:"Avoids wheat, barley, rye, and regular soy sauce." },
+  { id:"high-protein",label:"High-Protein",icon:"💪",
+    desc:"Prioritises recipes rich in plant or animal proteins." },
+  { id:"quick",       label:"Quick (≤20 min)",icon:"⏱️",
+    desc:"Only shows recipes that cook in 20 minutes or less." },
+];
+
+const ALLERGY_OPTIONS = [
+  { id:"nut-free",    label:"Nut Allergy",   icon:"🥜",
+    desc:"Avoids all tree nuts and peanuts." },
+  { id:"dairy-free",  label:"Dairy-Free",    icon:"🥛",
+    desc:"No milk, cheese, cream, butter, or yogurt." },
+  { id:"egg-free",    label:"Egg-Free",      icon:"🥚",
+    desc:"All egg-containing dishes excluded." },
+];
+
+/* ══════════════════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  renderQuickIngredients();
+  renderDietaryCards();
+  checkStatus();
+  loadPantryFromServer();
+});
+
+function checkStatus() {
+  fetch('/api/ingredients')
+    .then(r => r.ok
+      ? document.getElementById('statusDot').classList.remove('offline')
+      : document.getElementById('statusDot').classList.add('offline'))
+    .catch(() => document.getElementById('statusDot').classList.add('offline'));
+}
+
+function loadPantryFromServer() {
+  fetch('/api/ingredients')
+    .then(r => r.json())
+    .then(data => {
+      STATE.ingredients = data.ingredients || [];
+      renderAllTags();
+      updateCounts();
+    });
+  fetch('/api/filters')
+    .then(r => r.json())
+    .then(data => {
+      STATE.filters = data.filters || [];
+      renderDietaryCards();
+      renderSideFilters();
+    });
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   THEME
+═══════════════════════════════════════════════════════════════════════ */
+function toggleTheme() {
+  const html  = document.documentElement;
+  const dark  = html.getAttribute('data-theme') !== 'dark';
+  html.setAttribute('data-theme', dark ? 'dark' : 'light');
+  document.getElementById('themeIcon').className  = dark ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+  document.getElementById('themeLabel').textContent = dark ? 'Light' : 'Dark';
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   TAB NAVIGATION
+═══════════════════════════════════════════════════════════════════════ */
+function switchTab(tab, el) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'recipes') refreshRecipes();
+}
+
+function switchMob(tab, el) {
+  document.querySelectorAll('.mobile-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  // sync desktop tab
+  const desktopTab = document.querySelector(`.nav-tab[data-tab="${tab}"]`);
+  if (desktopTab) switchTab(tab, desktopTab);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   INGREDIENT MANAGEMENT
+═══════════════════════════════════════════════════════════════════════ */
+function renderQuickIngredients() {
+  ['quickIngredients','mainQuickIngredients'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = QUICK_INGREDIENTS.map(ing =>
+      `<span class="quick-prompt" onclick="addSpecificIngredient('${ing}')">${ing}</span>`
+    ).join('');
+  });
+}
+
+function addSpecificIngredient(name) {
+  if (!STATE.ingredients.includes(name)) {
+    STATE.ingredients.push(name);
+    syncIngredients();
+    toast(`Added: ${name}`);
+  }
+}
+
+function addIngredientSide() {
+  const input = document.getElementById('sideIngInput');
+  _addIngredients(input.value);
+  input.value = '';
+}
+
+function addIngredientMain() {
+  const input = document.getElementById('mainIngInput');
+  _addIngredients(input.value);
+  input.value = '';
+}
+
+function _addIngredients(raw) {
+  const items = raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  items.forEach(it => {
+    if (it && !STATE.ingredients.includes(it)) STATE.ingredients.push(it);
+  });
+  if (items.length) { syncIngredients(); toast(`Added ${items.join(', ')}`); }
+}
+
+function removeIngredient(name) {
+  STATE.ingredients = STATE.ingredients.filter(i => i !== name);
+  syncIngredients();
+}
+
+function clearAllIngredients() {
+  STATE.ingredients = [];
+  syncIngredients();
+  toast('Pantry cleared');
+}
+
+function syncIngredients() {
+  fetch('/api/ingredients', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ingredients: STATE.ingredients }),
+  })
+  .then(r => r.json())
+  .then(data => { STATE.ingredients = data.ingredients || []; renderAllTags(); updateCounts(); });
+}
+
+function renderAllTags() {
+  ['sideIngTags','mainIngTags'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (STATE.ingredients.length === 0) {
+      el.innerHTML = '<div class="empty-state" style="padding:.3rem 0"><i class="bi bi-basket3"></i>No ingredients yet</div>';
+      return;
+    }
+    el.innerHTML = STATE.ingredients.map(ing =>
+      `<span class="tag">${ing}<span class="remove-tag" onclick="removeIngredient('${ing}')">&times;</span></span>`
+    ).join('');
+  });
+}
+
+function updateCounts() {
+  const n = STATE.ingredients.length;
+  document.getElementById('sidePantryCount').textContent = n;
+  document.getElementById('mainPantryCount').textContent = n;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DIETARY FILTERS
+═══════════════════════════════════════════════════════════════════════ */
+function renderDietaryCards() {
+  _renderFilterGroup('dietaryCards', DIETARY_OPTIONS);
+  _renderFilterGroup('allergyCards', ALLERGY_OPTIONS);
+}
+
+function _renderFilterGroup(containerId, options) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = options.map(opt => {
+    const active = STATE.filters.includes(opt.id) ? 'active' : '';
+    return `
+      <div class="col-12 col-md-6">
+        <div class="restriction-card ${active}" onclick="toggleFilter('${opt.id}', this)">
+          <div class="restriction-title">${opt.icon} ${opt.label}
+            ${active ? '<i class="bi bi-check-circle-fill ms-auto" style="color:var(--accent)"></i>' : ''}
+          </div>
+          <div class="restriction-sub">${opt.desc}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleFilter(filterId, cardEl) {
+  const idx = STATE.filters.indexOf(filterId);
+  if (idx === -1) STATE.filters.push(filterId);
+  else            STATE.filters.splice(idx, 1);
+  syncFilters();
+  renderDietaryCards();
+  renderSideFilters();
+}
+
+function syncFilters() {
+  fetch('/api/filters', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filters: STATE.filters }),
+  });
+}
+
+function renderSideFilters() {
+  const el = document.getElementById('sideActiveFilters');
+  if (!el) return;
+  if (STATE.filters.length === 0) {
+    el.innerHTML = '<span style="font-size:.78rem;color:var(--text-muted)">No filters set</span>';
+    return;
+  }
+  el.innerHTML = STATE.filters.map(f =>
+    `<span class="filter-pill active" style="cursor:default">${f}</span>`
+  ).join('');
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   RECIPE RECOMMENDATIONS
+═══════════════════════════════════════════════════════════════════════ */
+function refreshRecipes() {
+  const grid = document.getElementById('recipeGrid');
+  grid.innerHTML = `<div class="col-12 text-center py-4" style="color:var(--text-muted)">
+    <div class="spinner-border spinner-border-sm me-2" role="status"></div>Fetching recipes…</div>`;
+
+  fetch('/api/recipes')
+    .then(r => r.json())
+    .then(data => {
+      const recipes = data.recipes || [];
+      document.getElementById('recipeTopK').textContent = recipes.length;
+      if (recipes.length === 0) {
+        grid.innerHTML = `<div class="col-12"><div class="empty-state">
+          <i class="bi bi-journal-bookmark"></i>
+          Add ingredients to your pantry to see recipe recommendations.
+        </div></div>`;
+        return;
+      }
+      grid.innerHTML = recipes.map(r => recipeCardHtml(r)).join('');
+    })
+    .catch(() => { grid.innerHTML = '<div class="col-12 text-center text-danger py-3">Failed to load recipes.</div>'; });
+}
+
+function recipeCardHtml(r) {
+  const wasteClass = r.waste_score >= 8 ? 'waste-high' : r.waste_score >= 5 ? 'waste-medium' : 'waste-low';
+  const wasteEmoji = r.waste_score >= 8 ? '🌿' : r.waste_score >= 5 ? '♻️' : '⚠️';
+  const matchedHtml = (r.matched || []).slice(0, 6)
+    .map(i => `<span class="ing-have">✓ ${i}</span>`).join('');
+  const missingHtml = (r.missing || []).slice(0, 4)
+    .map(i => `<span class="ing-missing">✗ ${i}</span>`).join('');
+
+  return `
+  <div class="col-12 col-md-6 col-xl-4">
+    <div class="recipe-card" onclick="askAboutRecipe('${r.name.replace(/'/g,"\\'")}')">
+      <div class="recipe-card-header">
+        <div class="recipe-name">${r.name}</div>
+        <div class="recipe-meta">
+          <span class="meta-badge"><i class="bi bi-clock"></i> ${r.cook_time} min</span>
+          <span class="badge-cuisine">${r.cuisine}</span>
+          <span class="waste-badge ${wasteClass}">${wasteEmoji} Waste ${r.waste_score}/10</span>
+        </div>
+        <div class="match-bar-wrap">
+          <div class="match-label">
+            <span>Ingredient match</span><span>${r.match_pct}%</span>
+          </div>
+          <div class="match-bar"><div class="match-fill" style="width:${r.match_pct}%"></div></div>
+        </div>
+      </div>
+      <div class="recipe-card-body">
+        <p style="font-size:.78rem;color:var(--text-muted);margin-bottom:.5rem">${r.description}</p>
+        <div class="ingredient-list">
+          ${matchedHtml}
+          ${missingHtml}
+          ${(r.missing || []).length > 4 ? `<span class="ing-missing">+${r.missing.length - 4} more</span>` : ''}
+        </div>
+        <div class="mt-2" style="font-size:.72rem;color:var(--text-muted)">
+          Tags: ${(r.tags || []).join(' · ')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function askAboutRecipe(name) {
+  const desktopTab = document.querySelector('.nav-tab[data-tab="chat"]');
+  if (desktopTab) switchTab('chat', desktopTab);
+  sendQuickPrompt(`Tell me how to make ${name} with my current pantry ingredients. Include substitutions for anything I'm missing.`);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   CHAT
+═══════════════════════════════════════════════════════════════════════ */
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 130) + 'px';
+}
+
+function sendQuickPrompt(text) {
+  document.getElementById('chatInput').value = text;
+  sendMessage();
+}
+
+function askSubstitution() {
+  const inp = document.getElementById('subInput');
+  const txt = inp.value.trim();
+  if (!txt) return;
+  inp.value = '';
+  const desktopTab = document.querySelector('.nav-tab[data-tab="chat"]');
+  if (desktopTab) switchTab('chat', desktopTab);
+  sendQuickPrompt(txt);
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const msg   = input.value.trim();
+  if (!msg) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  document.getElementById('sendBtn').disabled = true;
+
+  hideWelcome();
+  appendBubble('user', msg);
+  const typingId = showTyping();
+
+  try {
+    const resp = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message:     msg,
+        ingredients: STATE.ingredients,
+        filters:     STATE.filters,
+      }),
+    });
+    const data = await resp.json();
+    removeTyping(typingId);
+    if (data.error) {
+      appendBubble('agent', '⚠️ ' + data.error);
+    } else {
+      appendBubble('agent', data.reply);
+      if (data.recipes && data.recipes.length > 0) {
+        renderRecipePreview(data.recipes.slice(0, 3));
+      }
+    }
+  } catch (err) {
+    removeTyping(typingId);
+    appendBubble('agent', '⚠️ Network error. Please check your connection.');
+  }
+
+  document.getElementById('sendBtn').disabled = false;
+  document.getElementById('chatInput').focus();
+}
+
+function hideWelcome() {
+  const ws = document.getElementById('welcomeScreen');
+  const cm = document.getElementById('chatMessages');
+  if (ws) { ws.style.display = 'none'; }
+  if (cm) { cm.style.display = 'flex'; }
+}
+
+function appendBubble(role, content) {
+  const cm   = document.getElementById('chatMessages');
+  const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const isUser = role === 'user';
+
+  const row = document.createElement('div');
+  row.className = `bubble-row ${isUser ? 'user-row' : ''}`;
+
+  const avatar = document.createElement('div');
+  avatar.className = `avatar ${isUser ? 'avatar-user' : 'avatar-agent'}`;
+  avatar.textContent = isUser ? '👤' : '👩‍🍳';
+
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${isUser ? 'bubble-user' : 'bubble-agent'}`;
+  bubble.innerHTML = `<div class="markdown-body">${markdownToHtml(content)}</div>
+                      <div class="bubble-time">${time}</div>`;
+
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+  cm.appendChild(row);
+  cm.scrollTop = cm.scrollHeight;
+}
+
+function showTyping() {
+  const cm  = document.getElementById('chatMessages');
+  const id  = 'typing_' + Date.now();
+  const row = document.createElement('div');
+  row.id = id; row.className = 'bubble-row';
+  row.innerHTML = `
+    <div class="avatar avatar-agent">👩‍🍳</div>
+    <div class="bubble bubble-agent">
+      <div class="typing-indicator">
+        <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+      </div>
+    </div>`;
+  cm.appendChild(row);
+  cm.scrollTop = cm.scrollHeight;
+  return id;
+}
+
+function removeTyping(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+/* ── Inline recipe preview cards in chat ─────────────────────────────── */
+function renderRecipePreview(recipes) {
+  const cm = document.getElementById('chatMessages');
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;gap:.5rem;flex-wrap:wrap;padding:.25rem 0 .25rem 2.6rem;animation:bubbleIn .3s ease';
+  recipes.forEach(r => {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.5rem .8rem;cursor:pointer;font-size:.76rem;min-width:140px;max-width:200px;transition:box-shadow .15s';
+    card.onmouseenter = () => card.style.boxShadow = '0 4px 12px rgba(0,0,0,.12)';
+    card.onmouseleave = () => card.style.boxShadow = '';
+    card.onclick = () => askAboutRecipe(r.name);
+    const wasteClass = r.waste_score >= 8 ? 'waste-high' : r.waste_score >= 5 ? 'waste-medium' : 'waste-low';
+    card.innerHTML = `
+      <div style="font-weight:600;margin-bottom:.2rem">${r.name}</div>
+      <div style="color:var(--text-muted)">${r.cook_time} min · ${r.match_pct}% match</div>
+      <div class="waste-badge ${wasteClass} mt-1">🌿 ${r.waste_score}/10</div>`;
+    wrapper.appendChild(card);
+  });
+  cm.appendChild(wrapper);
+  cm.scrollTop = cm.scrollHeight;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   CLEAR CONVERSATION
+═══════════════════════════════════════════════════════════════════════ */
+function clearSession() {
+  fetch('/api/session/clear', { method: 'POST' }).then(() => {
+    document.getElementById('chatMessages').innerHTML = '';
+    document.getElementById('chatMessages').style.display = 'none';
+    document.getElementById('welcomeScreen').style.display = 'flex';
+    toast('Conversation cleared');
+  });
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MARKDOWN → HTML  (minimal, no external deps)
+═══════════════════════════════════════════════════════════════════════ */
+function markdownToHtml(text) {
+  if (!text) return '';
+  let html = text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`([^`]+)`/g, '<code style="background:var(--surface2);padding:.1em .3em;border-radius:4px;font-family:monospace;font-size:.85em">$1</code>');
+
+  // Block-level: numbered lists
+  html = html.replace(/(?:^|\n)(\d+\.\s.+?)(?=\n\d+\.|\n\n|$)/gs, (match) => {
+    const items = match.trim().split(/\n(?=\d+\.)/).map(line =>
+      `<li>${line.replace(/^\d+\.\s/, '')}</li>`).join('');
+    return `<ol>${items}</ol>`;
+  });
+  // Bullet lists
+  html = html.replace(/(?:^|\n)([-•]\s.+?)(?=\n[-•]|\n\n|$)/gs, (match) => {
+    const items = match.trim().split(/\n(?=[-•])/).map(line =>
+      `<li>${line.replace(/^[-•]\s/, '')}</li>`).join('');
+    return `<ul>${items}</ul>`;
+  });
+  // Paragraphs
+  html = html.split(/\n\n+/).map(p => {
+    if (/^<[uo]l>/.test(p.trim())) return p;
+    return `<p>${p.replace(/\n/g, '<br>')}</p>`;
+  }).join('');
+
+  return html;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   TOASTS
+═══════════════════════════════════════════════════════════════════════ */
+function toast(msg, duration = 2800) {
+  const el = document.createElement('div');
+  el.className = 'toast-msg';
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; }, duration - 400);
+  setTimeout(() => el.remove(), duration);
+}
+</script>
+</body>
+</html>
